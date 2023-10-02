@@ -1,4 +1,4 @@
-module rabbitmq
+module github.com/b85bagent/rabbitmq
 
 go 1.20
 

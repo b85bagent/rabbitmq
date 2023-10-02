@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"rabbitmq"
+	"github.com/b85bagent/rabbitmq"
 
 	"github.com/streadway/amqp"
 )
