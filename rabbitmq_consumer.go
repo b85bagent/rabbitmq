@@ -24,15 +24,16 @@ func ListenRabbitMQUsingRPC(rabbitMQArg RabbitMQArg, response string, handleFunc
 
 		conn, err := amqp.Dial(connStr)
 		if err != nil {
-			log.Printf("Failed to connect to RabbitMQ: %v", err)
-			retryCount++                 // 增加重試計數
+			retryCount++ // 增加重試計數
+			log.Printf("Failed to connect to RabbitMQ (Retry %d/%d): %v", retryCount, maxRetries, err)
+
 			if retryCount > maxRetries { // 檢查是否超過最大重試次數
 				log.Printf("rabbitMQ Max retries %d reached. Exiting...", maxRetries)
 				break
 			}
-			time.Sleep(5 * time.Second) // 等待 5 秒再嘗試重新連接
-			continue
 
+			time.Sleep(1 * time.Second) // 等待 1 秒再嘗試重新連接
+			continue
 		}
 
 		// 如果成功連接，則重設計數器
@@ -104,7 +105,7 @@ func ListenRabbitMQUsingRPC(rabbitMQArg RabbitMQArg, response string, handleFunc
 
 		ch.Close()
 		conn.Close()
-		time.Sleep(5 * time.Second) // 等待 5 秒再嘗試重新連接
+		time.Sleep(time.Second) // 等待 1 秒再嘗試重新連接
 	}
 
 	return nil
