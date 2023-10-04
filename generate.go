@@ -12,9 +12,10 @@ type RabbitMQArg struct {
 }
 
 type RPCResponse struct {
-	Status     string    `json:"status"`
-	StatusCode int       `json:"status_code"`
-	Message    string    `json:"message"`
-	Timestamp  time.Time `json:"timestamp"`
-	Queue      string    `json:"queue"`
+	Status        string    `json:"status"`
+	StatusCode    int       `json:"status_code"`
+	Message       string    `json:"message"`
+	CorrelationId string    `json:"correlation_id"`
+	Timestamp     time.Time `json:"timestamp"`
+	Queue         string    `json:"queue"`
 }
