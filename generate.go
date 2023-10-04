@@ -18,7 +18,3 @@ type RPCResponse struct {
 	Timestamp  time.Time `json:"timestamp"`
 	Queue      string    `json:"queue"`
 }
-
-type OuterResponse struct {
-	Detail RPCResponse `json:"detail"`
-}
