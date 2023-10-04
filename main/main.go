@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"os"
+	"time"
 
 	"github.com/b85bagent/rabbitmq"
 
@@ -24,16 +26,33 @@ func test_consumer() {
 		RabbitMQRoutingKey: "format",
 		RabbitMQQueue:      "rpc-modules",
 	}
-	response := "Agent get MQ message Successfully"
-	err := rabbitmq.ListenRabbitMQUsingRPC(rabbitMQArg, response, func(msg amqp.Delivery, ch *amqp.Channel, response string) error {
+
+	RPCResponse := rabbitmq.RPCResponse{}
+
+	err := rabbitmq.ListenRabbitMQUsingRPC(rabbitMQArg, RPCResponse, func(msg amqp.Delivery, ch *amqp.Channel, RPCResponse rabbitmq.RPCResponse) error {
 
 		log.Println(string(msg.Body))
 
 		err := SaveYAMLToFile(msg.Body, "./blackboxTest1.yaml")
 		if err != nil {
 			log.Printf("Error writing to target.yaml: %v", err)
-			response = err.Error()
+			RPCResponse.Status = "Failed"
+			RPCResponse.StatusCode = 400
+			RPCResponse.Message = "Error writing to target.yaml:" + err.Error()
+			RPCResponse.Queue = rabbitMQArg.RabbitMQQueue
+			RPCResponse.Timestamp = time.Now()
+		}
 
+		RPCResponse.Status = "Success"
+		RPCResponse.StatusCode = 200
+		RPCResponse.Message = "Agent get MQ message Successfully"
+		RPCResponse.Queue = rabbitMQArg.RabbitMQQueue
+		RPCResponse.Timestamp = time.Now()
+
+		response, err := json.Marshal(RPCResponse)
+		if err != nil {
+			log.Printf("Error marshaling to JSON: %v\n", err)
+			return err
 		}
 
 		// 發送回應到 reply_to 隊列
@@ -45,7 +64,7 @@ func test_consumer() {
 			amqp.Publishing{
 				ContentType:   "text/plain",
 				CorrelationId: msg.CorrelationId,
-				Body:          []byte(response),
+				Body:          response,
 			})
 		if errReplay != nil {
 			log.Printf("Failed to publish a message Replay: %s", errReplay)

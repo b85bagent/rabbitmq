@@ -11,7 +11,7 @@ import (
 type MessageHandler func(msg amqp.Delivery) error
 
 // Consume for rabbitMQ messages , rpc mode
-func ListenRabbitMQUsingRPC(rabbitMQArg RabbitMQArg, response string, handleFunc func(msg amqp.Delivery, ch *amqp.Channel, response string) error) error {
+func ListenRabbitMQUsingRPC(rabbitMQArg RabbitMQArg, response RPCResponse, handleFunc func(msg amqp.Delivery, ch *amqp.Channel, response RPCResponse) error) error {
 
 	retryCount := 0  // 加入一個重試計數器
 	maxRetries := 50 // 您可以設定您希望的最大重試次數
