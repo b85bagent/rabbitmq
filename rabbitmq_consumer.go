@@ -13,8 +13,9 @@ type MessageHandler func(msg amqp.Delivery) error
 // Consume for rabbitMQ messages , rpc mode
 func ListenRabbitMQUsingRPC(rabbitMQArg RabbitMQArg, response string, handleFunc func(msg amqp.Delivery, ch *amqp.Channel, response string) error) error {
 
-	retryCount := 0  // 加入一個重試計數器
-	maxRetries := 50 // 您可以設定您希望的最大重試次數
+	retryCount := 0                  // 加入一個重試計數器
+	maxRetries := 50                 // 您可以設定您希望的最大重試次數
+	signalChan := make(chan bool, 1) // 用于发送信号的通道
 
 	for {
 		connStr := fmt.Sprintf("amqp://%s:%s@%s/", rabbitMQArg.Username, rabbitMQArg.Password, rabbitMQArg.Host)
@@ -75,16 +76,31 @@ func ListenRabbitMQUsingRPC(rabbitMQArg RabbitMQArg, response string, handleFunc
 			continue
 		}
 
-		for msg := range msgs {
+		closeChan := conn.NotifyClose(make(chan *amqp.Error))
+		go func() {
+			err := <-closeChan
+			log.Printf("RabbitMQ connection closed: %v", err)
+			signalChan <- true // 发送一个信号，让外部循环继续
+		}()
 
-			// 调用传递进来的 handler 函数处理消息
-			if err := handleFunc(msg, ch, response); err != nil {
-				log.Printf("Handler error: %s", err)
+	outerLoop:
+		for {
+			select {
+			case <-signalChan: // 接收到信号时，退出select，继续外部循环
+				ch.Close()
+				conn.Close()
+				break outerLoop
+			case msg, ok := <-msgs:
+				if !ok {
+					break outerLoop
+				}
+				// 调用传递进来的 handler 函数处理消息
+				if err := handleFunc(msg, ch, response); err != nil {
+					log.Printf("Handler error: %s", err)
+				}
 			}
-
 		}
 
-		// 如果能從上面的迴圈出來，代表可能發生了錯誤或者連接中斷
 		ch.Close()
 		conn.Close()
 		time.Sleep(5 * time.Second) // 等待 5 秒再嘗試重新連接
