@@ -89,8 +89,11 @@ func ListenRabbitMQUsingRPC(rabbitMQArg RabbitMQArg, response string, handleFunc
 		for {
 			select {
 			case <-signalChan: // 接收到信号时，退出select，继续外部循环
-				ch.Close()
-				conn.Close()
+
+				err := conn.Close()
+				if err != nil {
+					log.Println("conn close error: ", err)
+				}
 				break outerLoop
 			case msg, ok := <-msgs:
 				if !ok {
