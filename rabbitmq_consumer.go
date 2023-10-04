@@ -33,6 +33,8 @@ func ListenRabbitMQUsingRPC(rabbitMQArg RabbitMQArg, response string, handleFunc
 
 		}
 
+		log.Println("Connected to RabbitMQ")
+
 		// 如果成功連接，則重設計數器
 		retryCount = 0
 
