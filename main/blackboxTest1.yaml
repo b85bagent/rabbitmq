@@ -1,0 +1,36 @@
+modules:
+  dns_test:
+    prober: dns
+    timeout: 5s
+  dns_test1:
+    prober: dns
+    timeout: 50s
+  dns_test2:
+    prober: dns
+    query_class: IN
+    query_name: www.google.com
+    query_type: A
+    timeout: 60s
+  grpc:
+    prober: grpc
+  grpc_plain:
+    prober: grpc
+  http_2xx:
+    prober: http
+    timeout: 30s
+  http_post_2xx:
+    prober: http
+    timeout: 3s
+  icmp:
+    prober: icmp
+  icmp_ttl5:
+    prober: icmp
+    timeout: 5s
+  irc_banner:
+    prober: tcp
+  pop3s_banner:
+    prober: tcp
+  ssh_banner:
+    prober: tcp
+  tcp_connect:
+    prober: tcp

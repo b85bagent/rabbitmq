@@ -13,11 +13,13 @@ type MessageHandler func(msg amqp.Delivery) error
 // Consume for rabbitMQ messages , rpc mode
 func ListenRabbitMQUsingRPC(rabbitMQArg RabbitMQArg, response string, handleFunc func(msg amqp.Delivery, ch *amqp.Channel, response string) error) error {
 
-	retryCount := 0                  // 加入一個重試計數器
-	maxRetries := 50                 // 您可以設定您希望的最大重試次數
-	signalChan := make(chan bool, 1) // 用于发送信号的通道
+	retryCount := 0  // 加入一個重試計數器
+	maxRetries := 50 // 您可以設定您希望的最大重試次數
 
 	for {
+
+		signalChan := make(chan bool, 1) // 每次循環開始時都重新創建一個 signalChan
+
 		connStr := fmt.Sprintf("amqp://%s:%s@%s/", rabbitMQArg.Username, rabbitMQArg.Password, rabbitMQArg.Host)
 
 		conn, err := amqp.Dial(connStr)
@@ -32,8 +34,6 @@ func ListenRabbitMQUsingRPC(rabbitMQArg RabbitMQArg, response string, handleFunc
 			continue
 
 		}
-
-		log.Println("Connected to RabbitMQ")
 
 		// 如果成功連接，則重設計數器
 		retryCount = 0
@@ -89,11 +89,7 @@ func ListenRabbitMQUsingRPC(rabbitMQArg RabbitMQArg, response string, handleFunc
 		for {
 			select {
 			case <-signalChan: // 接收到信号时，退出select，继续外部循环
-
-				err := conn.Close()
-				if err != nil {
-					log.Println("conn close error: ", err)
-				}
+				conn.Close()
 				break outerLoop
 			case msg, ok := <-msgs:
 				if !ok {

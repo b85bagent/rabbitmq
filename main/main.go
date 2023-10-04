@@ -10,8 +10,8 @@ import (
 )
 
 func main() {
-	// test_consumer()
-	test_product()
+	test_consumer()
+	// test_product()
 
 }
 
@@ -24,7 +24,7 @@ func test_consumer() {
 		RabbitMQRoutingKey: "format",
 		RabbitMQQueue:      "rpc-modules",
 	}
-	response := "Agent get MQ message Successfully 123456"
+	response := "Agent get MQ message Successfully"
 	err := rabbitmq.ListenRabbitMQUsingRPC(rabbitMQArg, response, func(msg amqp.Delivery, ch *amqp.Channel, response string) error {
 
 		log.Println(string(msg.Body))
