@@ -19,3 +19,10 @@ type RPCResponse struct {
 	Timestamp     time.Time `json:"timestamp"`
 	Queue         string    `json:"queue"`
 }
+
+const (
+	Response_Failed       = "Failed"
+	Response_Success      = "Success"
+	Response_Failed_Code  = 400
+	Response_Success_Code = 200
+)
