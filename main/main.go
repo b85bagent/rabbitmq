@@ -35,16 +35,21 @@ func test_consumer() {
 
 		RPCResponse.Status = "Success"
 		RPCResponse.StatusCode = 200
-		RPCResponse.Message = "Agent get MQ message Successfully"
+		t := make(map[string]interface{})
+		t["message"] = "Agent get MQ message Successfully"
+
+		RPCResponse.Response = t
 		RPCResponse.Queue = rabbitMQArg.RabbitMQQueue
 		RPCResponse.Timestamp = time.Now()
 
 		err := SaveYAMLToFile(msg.Body, "./blackboxTest1.yaml")
 		if err != nil {
+			t := make(map[string]interface{})
+			t["message"] = "Error writing to target.yaml:" + err.Error()
 			log.Printf("Error writing to target.yaml: %v", err)
 			RPCResponse.Status = "Failed"
 			RPCResponse.StatusCode = 400
-			RPCResponse.Message = "Error writing to target.yaml:" + err.Error()
+			RPCResponse.Response = t
 			RPCResponse.Queue = rabbitMQArg.RabbitMQQueue
 			RPCResponse.Timestamp = time.Now()
 		}
