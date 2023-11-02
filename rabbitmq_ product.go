@@ -3,25 +3,54 @@ package rabbitmq
 import (
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/streadway/amqp"
 )
 
-func SendMessageToRabbitMQ(rabbitMQArg RabbitMQArg, data []byte) error {
+type RabbitMQClient struct {
+	rabbitMQArg RabbitMQArg
+	conn        *amqp.Connection
+	ch          *amqp.Channel
+	mu          sync.Mutex
+}
 
+func NewRabbitMQClient(rabbitMQArg RabbitMQArg) (*RabbitMQClient, error) {
 	conn, ch, err := createConnectionAndChannel(rabbitMQArg)
 	if err != nil {
-		return logAndReturnError(fmt.Sprintf("Failed to create connection or channel: %v", err))
+		return nil, fmt.Errorf("failed to create connection or channel: %v", err)
 	}
 
-	defer closeResources(conn, ch)
+	return &RabbitMQClient{
+		rabbitMQArg: rabbitMQArg,
+		conn:        conn,
+		ch:          ch,
+	}, nil
+}
 
-	if err := ensureExchangeExists(ch, conn, rabbitMQArg); err != nil {
-		return logAndReturnError(fmt.Sprintf("Failed to ensure exchange exists: %v", err))
+func (c *RabbitMQClient) Close() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.ch != nil {
+		c.ch.Close()
+		c.ch = nil
+	}
+	if c.conn != nil {
+		c.conn.Close()
+		c.conn = nil
+	}
+}
+
+func (c *RabbitMQClient) SendMessage(data []byte) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if err := ensureExchangeExists(c.ch, c.conn, c.rabbitMQArg); err != nil {
+		return logAndReturnError(fmt.Sprintf("failed to ensure exchange exists: %v", err))
 	}
 
-	if err := publishMessage(ch, rabbitMQArg, data); err != nil {
-		return logAndReturnError(fmt.Sprintf("Failed to publish a message: %v", err))
+	if err := publishMessage(c.ch, c.rabbitMQArg, data); err != nil {
+		return logAndReturnError(fmt.Sprintf("failed to publish a message: %v", err))
 	}
 
 	return nil

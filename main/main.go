@@ -12,8 +12,8 @@ import (
 )
 
 func main() {
-	test_consumer()
-	// test_product()
+	// test_consumer()
+	test_product()
 
 }
 
@@ -91,18 +91,25 @@ func test_consumer() {
 }
 
 func test_product() {
+
 	rabbitMQArg := rabbitmq.RabbitMQArg{
-		Host:               "10.11.233.80:5672",
-		Username:           "admin",
-		Password:           "admin123",
-		RabbitMQExchange:   "lex-test-queue",
-		RabbitMQRoutingKey: "lex-test-queue",
+		Host:               "localhost:5672",
+		Username:           "guest",
+		Password:           "guest",
+		RabbitMQExchange:   "health",
+		RabbitMQRoutingKey: "health",
 		RabbitMQQueue:      "rpc-modules",
 	}
+
 	data := []byte("Agent get MQ message Successfully")
 
-	err := rabbitmq.SendMessageToRabbitMQ(rabbitMQArg, data)
+	client, err := rabbitmq.NewRabbitMQClient(rabbitMQArg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Close()
 
+	err = client.SendMessage([]byte(data))
 	if err != nil {
 		log.Fatal(err)
 	}
