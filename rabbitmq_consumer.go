@@ -106,10 +106,13 @@ func ListenRabbitMQUsingRPC(rabbitMQArg RabbitMQArg, response RPCResponse, handl
 				if !ok {
 					break outerLoop
 				}
-				// 调用传递进来的 handler 函数处理消息
-				if err := handleFunc(msg, ch, response); err != nil {
-					log.Printf("Handler error: %s", err)
-				}
+				go func(m amqp.Delivery) { // 在goroutine中处理消息
+					if err := handleFunc(m, ch, response); err != nil {
+						log.Printf("Handler error: %s", err)
+					}
+					// 确认消息处理完成，可以选择在handleFunc内部确认
+					m.Ack(false)
+				}(msg)
 			}
 		}
 
