@@ -46,6 +46,16 @@ func ListenRabbitMQUsingRPC(rabbitMQArg RabbitMQArg, response RPCResponse, handl
 			continue
 		}
 
+		// 设置预取计数
+		err = ch.Qos(
+			15,    // 预取计数设置为1，你可以根据需要增加这个数值
+			0,     // prefetchSize - 按照AMQP 0-9-1标准，prefetchSize必须设置为0
+			false, // 是否将这个设置应用于整个Channel，false表示只对当前消费者有效
+		)
+		if err != nil {
+			log.Fatalf("Failed to set channel QoS: %s", err)
+		}
+
 		// 聲明一个 Queue
 		queue, err := ch.QueueDeclare(
 			rabbitMQArg.RabbitMQQueue, // queue name
