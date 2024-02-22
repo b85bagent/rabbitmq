@@ -49,6 +49,11 @@ func (c *RabbitMQClient) SendMessage(data []byte) error {
 		return logAndReturnError(fmt.Sprintf("failed to ensure exchange exists: %v", err))
 	}
 
+	// 新增：確保Queue存在
+	if err := c.EnsureQueueAndBind(); err != nil {
+		return logAndReturnError(fmt.Sprintf("failed to ensure queue exists: %v", err))
+	}
+
 	if err := publishMessage(c.ch, c.rabbitMQArg, data); err != nil {
 		return logAndReturnError(fmt.Sprintf("failed to publish a message: %v", err))
 	}
@@ -132,6 +137,35 @@ func publishMessage(ch *amqp.Channel, rabbitMQArg RabbitMQArg, data []byte) erro
 		log.Printf("Failed to publish a message: %s", err)
 		return err
 	}
+	return nil
+}
+
+func (c *RabbitMQClient) EnsureQueueAndBind() error {
+	// 确保Queue存在
+	_, err := c.ch.QueueDeclare(
+		c.rabbitMQArg.RabbitMQRoutingKey, // 这里使用RoutingKey作为Queue名称
+		true,                             // durable
+		false,                            // delete when unused
+		false,                            // exclusive
+		false,                            // no-wait
+		nil,                              // arguments
+	)
+	if err != nil {
+		return fmt.Errorf("failed to declare a queue: %v", err)
+	}
+
+	// 绑定Queue到Exchange
+	err = c.ch.QueueBind(
+		c.rabbitMQArg.RabbitMQRoutingKey, // queue name
+		c.rabbitMQArg.RabbitMQRoutingKey, // routing key
+		c.rabbitMQArg.RabbitMQExchange,   // exchange
+		false,
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to bind a queue to exchange: %v", err)
+	}
+
 	return nil
 }
 
