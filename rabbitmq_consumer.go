@@ -3,6 +3,7 @@ package rabbitmq
 import (
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/streadway/amqp"
@@ -16,6 +17,7 @@ func ListenRabbitMQUsingRPC(rabbitMQArg RabbitMQArg, response RPCResponse, handl
 		conn *amqp.Connection
 		ch   *amqp.Channel
 		err  error
+		wg   *sync.WaitGroup
 	)
 	connStr := fmt.Sprintf("amqp://%s:%s@%s/", rabbitMQArg.Username, rabbitMQArg.Password, rabbitMQArg.Host)
 	retryCount := 0  // 重試計數器
@@ -63,6 +65,7 @@ func ListenRabbitMQUsingRPC(rabbitMQArg RabbitMQArg, response RPCResponse, handl
 				log.Printf("RabbitMQ Max retries %d reached. Exiting...", maxRetries)
 				return err
 			}
+
 			time.Sleep(1 * time.Second)
 			continue
 		}
@@ -106,13 +109,18 @@ func ListenRabbitMQUsingRPC(rabbitMQArg RabbitMQArg, response RPCResponse, handl
 		}()
 
 		for d := range msgs {
+			wg.Add(1)
 			go func(m amqp.Delivery) {
+				defer wg.Done()
 				if err := handleFunc(m, ch, response); err != nil {
 					log.Printf("Handler error: %s", err)
+					_ = m.Nack(false, true)
 				}
 				_ = m.Ack(false)
 			}(d)
 		}
+
+		wg.Wait()
 
 		// If msgs channel is closed, loop will break and try to reconnect
 	}

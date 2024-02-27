@@ -144,7 +144,7 @@ func (c *RabbitMQClient) EnsureQueueAndBind() error {
 	// 确保Queue存在
 	_, err := c.ch.QueueDeclare(
 		c.rabbitMQArg.RabbitMQRoutingKey, // 这里使用RoutingKey作为Queue名称
-		true,                             // durable
+		false,                            // durable
 		false,                            // delete when unused
 		false,                            // exclusive
 		false,                            // no-wait
