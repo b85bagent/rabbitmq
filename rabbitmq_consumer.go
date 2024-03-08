@@ -131,3 +131,48 @@ func ListenRabbitMQUsingRPC(rabbitMQArg RabbitMQArg, response RPCResponse, handl
 	defer conn.Close()
 	return nil
 }
+
+func ListenRabbitMQUsingRPCForInterval(rabbitMQArg RabbitMQArg, handleFunc func(amqp.Delivery) error) error {
+	conn, err := amqp.Dial(fmt.Sprintf("amqp://%s:%s@%s/", rabbitMQArg.Username, rabbitMQArg.Password, rabbitMQArg.Host))
+	if err != nil {
+		return fmt.Errorf("failed to connect to RabbitMQ: %v", err)
+	}
+	defer conn.Close() // 确保连接被关闭
+
+	ch, err := conn.Channel()
+	if err != nil {
+		return fmt.Errorf("failed to open a channel: %v", err)
+	}
+	defer ch.Close() // 确保通道被关闭
+
+	msgs, err := ch.Consume(
+		rabbitMQArg.RabbitMQQueue,
+		"",
+		false, // auto-ack 设置为false，我们将不自动发送ACK
+		false, // exclusive
+		false, // no-local
+		true,  // no-wait 设置为true，不等待消息就断开连接
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to register a consumer: %v", err)
+	}
+
+	log.Printf("Connected to RabbitMQ, checking for messages...")
+	select {
+	case d, ok := <-msgs:
+		if !ok {
+			log.Println("No messages in queue, disconnecting...")
+			return nil
+		}
+		log.Println("Message received, processing...")
+		if err := handleFunc(d); err != nil {
+			log.Printf("Error handling message: %v", err)
+		}
+		// 不发送ACK，让消息依赖于TTL
+		return nil
+	case <-time.After(5 * time.Second): // 等待一定时间，如果没有消息则断开连接
+		log.Println("No messages received within timeout period, disconnecting...")
+		return nil
+	}
+}
