@@ -132,7 +132,7 @@ func ListenRabbitMQUsingRPC(rabbitMQArg RabbitMQArg, response RPCResponse, handl
 	return nil
 }
 
-func ListenRabbitMQUsingRPCForInterval(rabbitMQArg RabbitMQArg, handleFunc func(amqp.Delivery) error) error {
+func ListenRabbitMQUsingRPCForInterval(rabbitMQArg RabbitMQArg, response RPCResponse, handleFunc func(msg amqp.Delivery, ch *amqp.Channel, response RPCResponse) error) error {
 	conn, err := amqp.Dial(fmt.Sprintf("amqp://%s:%s@%s/", rabbitMQArg.Username, rabbitMQArg.Password, rabbitMQArg.Host))
 	if err != nil {
 		return fmt.Errorf("failed to connect to RabbitMQ: %v", err)
@@ -166,7 +166,7 @@ func ListenRabbitMQUsingRPCForInterval(rabbitMQArg RabbitMQArg, handleFunc func(
 			return nil
 		}
 		log.Println("Message received, processing...")
-		if err := handleFunc(d); err != nil {
+		if err := handleFunc(d, ch, response); err != nil {
 			log.Printf("Error handling message: %v", err)
 		}
 		// 不发送ACK，让消息依赖于TTL
