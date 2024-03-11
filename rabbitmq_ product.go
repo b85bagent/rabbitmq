@@ -186,7 +186,6 @@ func (c *RabbitMQClient) EnsureQueueAndBind() error {
 		return fmt.Errorf("綁定隊列到交換機失敗: %v", err)
 	}
 
-	log.Printf("隊列 '%s' 成功綁定到交換機 '%s'", queue.Name, c.rabbitMQArg.RabbitMQExchange)
 	return nil
 }
 
