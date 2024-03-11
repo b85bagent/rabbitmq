@@ -141,31 +141,52 @@ func publishMessage(ch *amqp.Channel, rabbitMQArg RabbitMQArg, data []byte) erro
 }
 
 func (c *RabbitMQClient) EnsureQueueAndBind() error {
-	// 确保Queue存在
-	_, err := c.ch.QueueDeclare(
-		c.rabbitMQArg.RabbitMQRoutingKey, // 这里使用RoutingKey作为Queue名称
-		false,                            // durable
+	// 确保队列存在
+	queue, err := c.ch.QueueDeclare(
+		c.rabbitMQArg.RabbitMQRoutingKey, // 这里使用RoutingKey作为队列名称
+		true,                             // durable
 		false,                            // delete when unused
 		false,                            // exclusive
 		false,                            // no-wait
 		nil,                              // arguments
 	)
 	if err != nil {
-		return fmt.Errorf("failed to declare a queue: %v", err)
+		// 检查错误是否为PRECONDITION_FAILED错误
+		if amqpErr, ok := err.(*amqp.Error); ok && amqpErr.Code == amqp.PreconditionFailed {
+			log.Printf("隊列條件預設失敗，嘗試重新創建: %s", amqpErr)
+
+			// 重試创建队列，这次使用durable为false
+			queue, err = c.ch.QueueDeclare(
+				c.rabbitMQArg.RabbitMQRoutingKey, // 队列名称
+				false,                            // durable
+				false,                            // delete when unused
+				false,                            // exclusive
+				false,                            // no-wait
+				nil,                              // arguments
+			)
+			if err != nil {
+				log.Printf("重新創建隊列失敗: %s", err)
+				return err
+			}
+		} else {
+			log.Printf("創建隊列失敗: %s", err)
+			return err
+		}
 	}
 
-	// 绑定Queue到Exchange
+	// 绑定队列到Exchange
 	err = c.ch.QueueBind(
-		c.rabbitMQArg.RabbitMQRoutingKey, // queue name
+		queue.Name,                       // queue name
 		c.rabbitMQArg.RabbitMQRoutingKey, // routing key
 		c.rabbitMQArg.RabbitMQExchange,   // exchange
 		false,
 		nil,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to bind a queue to exchange: %v", err)
+		return fmt.Errorf("綁定隊列到交換機失敗: %v", err)
 	}
 
+	log.Printf("隊列 '%s' 成功綁定到交換機 '%s'", queue.Name, c.rabbitMQArg.RabbitMQExchange)
 	return nil
 }
 
